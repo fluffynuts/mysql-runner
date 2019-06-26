@@ -5,7 +5,7 @@
     "main": "gulpfile.js",
     "scripts": {
         "test": "run-s \"gulp test-dotnet\"",
-        "publish": "run-s \"gulp dotnet-publish\"",
+        "publish": "cross-env DOTNET_PUBLISH_RUNTIMES=win10-x64 run-s \"gulp dotnet-publish\"",
         "gulp": "cross-env BUILD_TOOLS_FOLDER=tools gulp",
         "build": "run-s \"gulp build\"",
         "pack": "BUILD_CONFIGURATION=Release run-s \"gulp pack\""

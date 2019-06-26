@@ -5,6 +5,9 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <RootNamespace>mysql_runner</RootNamespace>
   </PropertyGroup>
+  <PropertyGroup>
+    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MySqlConnector" Version="0.56.0" />
