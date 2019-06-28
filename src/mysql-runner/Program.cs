@@ -8,6 +8,11 @@ namespace mysql_runner
         static void Main(string[] args)
         {
             var opts = new Options(args);
+            if (opts.ShowedHelp)
+            {
+                return;
+            }
+
             var connectionStringProvider = new ConnectionStringProvider(opts);
             opts.Files.ForEach(file =>
             {

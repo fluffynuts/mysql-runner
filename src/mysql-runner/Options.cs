@@ -16,9 +16,16 @@ namespace mysql_runner
         public bool Quiet { get; set; }
         public bool StopOnError { get; set; }
         public string Database { get; set; }
+        public bool ShowedHelp { get; set; }
 
         public Options(string[] args)
         {
+            if (args.Length == 0)
+            {
+                ShowHelp(this);
+                return;
+            }
+
             Parse(args);
             Validate();
         }
@@ -59,7 +66,8 @@ namespace mysql_runner
             new Dictionary<string, Action<Options>>()
             {
                 ["-q"] = SetQuiet,
-                ["-s"] = SetStopOnError
+                ["-s"] = SetStopOnError,
+                ["--help"] = ShowHelp
             };
 
         private static void SetStopOnError(Options obj)
@@ -79,8 +87,26 @@ namespace mysql_runner
                 ["-p"] = SetPassword,
                 ["-P"] = SetPort,
                 ["-h"] = SetHost,
-                ["-d"] = SetDatabase
+                ["-d"] = SetDatabase,
             };
+
+        private static void ShowHelp(Options arg1)
+        {
+            arg1.ShowedHelp = true;
+            new[]
+            {
+                "Usage: mysql-runner {options} <file.sql> {<file.sql>...}",
+                "  options:",
+                "  -d            Database name (required)",
+                "  -h            MySql host (default: localhost)",
+                "  -u            MySql user (required)",
+                "  -p            MySql password (required)",
+                "  -P            port (default 3306)",
+                "  -q            operate quietly",
+                "  -s            stop on errors (defaults is to report and continue)",
+                "  --help        this help"
+            }.ForEach(Console.WriteLine);
+        }
 
         private static void SetDatabase(Options arg1, string arg2)
         {
