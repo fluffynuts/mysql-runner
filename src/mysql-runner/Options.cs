@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using PeanutButter.Utils;
 
 namespace mysql_runner
 {
@@ -18,6 +20,9 @@ namespace mysql_runner
         public string Database { get; set; }
         public bool ShowedHelp { get; set; }
 
+        public bool IsValid { get; set; }
+        private bool ShouldPromptForPassword { get; set; }
+
         public Options(string[] args)
         {
             if (args.Length == 0)
@@ -27,13 +32,21 @@ namespace mysql_runner
             }
 
             Parse(args);
+            if (ShowedHelp)
+            {
+                return;
+            }
+
             Validate();
+            if (IsValid && ShouldPromptForPassword)
+            {
+                PromptForPassword(this);
+            }
         }
 
         private void Parse(string[] args)
         {
             Action<Options, string> optionHandler = null;
-            Action<Options> flagHandler = null;
             foreach (var arg in args)
             {
                 if (OptionHandlers.TryGetValue(arg, out var thisOptionHandler))
@@ -44,21 +57,28 @@ namespace mysql_runner
 
                 if (FlagHandlers.TryGetValue(arg, out var thisFlagHandler))
                 {
-                    flagHandler = thisFlagHandler;
+                    thisFlagHandler.Invoke(this);
                     continue;
                 }
 
-                if (optionHandler == null &&
-                    flagHandler == null)
+                if (optionHandler == null)
                 {
                     AddFile(this, arg);
                     continue;
                 }
 
                 optionHandler?.Invoke(this, arg);
-                flagHandler?.Invoke(this);
                 optionHandler = null;
-                flagHandler = null;
+            }
+
+            if (ShowedHelp)
+            {
+                return;
+            }
+
+            if (optionHandler != null)
+            {
+                throw new ArgumentException($"No option value set for {args.Last()}");
             }
         }
 
@@ -67,8 +87,45 @@ namespace mysql_runner
             {
                 ["-q"] = SetQuiet,
                 ["-s"] = SetStopOnError,
-                ["--help"] = ShowHelp
+                ["--help"] = ShowHelp,
+                ["--prompt"] = SetShouldPromptForPassword
             };
+
+        private static void SetShouldPromptForPassword(Options obj)
+        {
+            obj.ShouldPromptForPassword = true;
+        }
+
+        private static void PromptForPassword(Options obj)
+        {
+            Console.Out.Write("Please enter password: ");
+            var pass = "";
+            do
+            {
+                var key = Console.ReadKey(true);
+                // Backspace Should Not Work
+                if (key.Key != ConsoleKey.Backspace && key.Key != ConsoleKey.Enter)
+                {
+                    pass += key.KeyChar;
+                    Console.Write("*");
+                }
+                else
+                {
+                    if (key.Key == ConsoleKey.Backspace && pass.Length > 0)
+                    {
+                        pass = pass.Substring(0, (pass.Length - 1));
+                        Console.Write("\b \b");
+                    }
+                    else if (key.Key == ConsoleKey.Enter)
+                    {
+                        break;
+                    }
+                }
+            } while (true);
+
+            obj.Password = pass;
+            Console.WriteLine("");
+        }
 
         private static void SetStopOnError(Options obj)
         {
@@ -92,20 +149,24 @@ namespace mysql_runner
 
         private static void ShowHelp(Options arg1)
         {
-            arg1.ShowedHelp = true;
             new[]
             {
+                "MySql Runner",
                 "Usage: mysql-runner {options} <file.sql> {<file.sql>...}",
-                "  options:",
-                "  -d            Database name (required)",
-                "  -h            MySql host (default: localhost)",
-                "  -u            MySql user (required)",
-                "  -p            MySql password (required)",
-                "  -P            port (default 3306)",
-                "  -q            operate quietly",
-                "  -s            stop on errors (defaults is to report and continue)",
-                "  --help        this help"
-            }.ForEach(Console.WriteLine);
+                "  where options are of:",
+                "  -d {database}    set database (no default)",
+                "  -h {host}        set database host (defaults to localhost)",
+                "  -p {password}    set password to log in with (defaults empty)",
+                "  --prompt         will prompt for password",
+                "  -P {port}        set port (defaults to 3306}",
+                "  -s               stop on error (defaults to carry on)",
+                "  -q               quiet operations",
+                "  -u {user}        set user to log in with (defaults to root)",
+            }.ForEach(line =>
+            {
+                Console.WriteLine(line);
+            });
+            arg1.ShowedHelp = true;
         }
 
         private static void SetDatabase(Options arg1, string arg2)
@@ -157,10 +218,20 @@ namespace mysql_runner
 
         private void Validate()
         {
+            IsValid = true;
             CheckSet("-u", User);
-            CheckSet("-p", Password);
+            if (!ShouldPromptForPassword)
+            {
+                CheckSet("-p", Password);
+            }
+
             CheckSet("-h", Host);
             CheckSet("-d", Database);
+            if (Files.IsEmpty())
+            {
+                Console.WriteLine("No files specified");
+                IsValid = false;
+            }
         }
 
         private void CheckSet(string arg, string value)
@@ -168,6 +239,7 @@ namespace mysql_runner
             if (string.IsNullOrWhiteSpace(value))
             {
                 Console.WriteLine($"Required argument missing: {arg}");
+                IsValid = false;
             }
         }
     }

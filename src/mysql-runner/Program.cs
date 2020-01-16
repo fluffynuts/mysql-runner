@@ -5,41 +5,48 @@ namespace mysql_runner
 {
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             var opts = new Options(args);
             if (opts.ShowedHelp)
             {
-                return;
+                return 0;
+            }
+
+            if (!opts.IsValid)
+            {
+                return 2;
             }
 
             var connectionStringProvider = new ConnectionStringProvider(opts);
+            RunAllScriptFiles(opts, connectionStringProvider);
+            return 0;
+        }
+
+        private static void RunAllScriptFiles(Options opts, ConnectionStringProvider connectionStringProvider)
+        {
             opts.Files.ForEach(file =>
             {
-                using (var reader = new StatementReader(file))
+                using var reader = new StatementReader(file);
+                string statement;
+                while ((statement = reader.Next()) != null)
                 {
-                    string statement;
-                    while ((statement = reader.Next()) != null)
+                    using var conn = ConnectionFactory.Open(connectionStringProvider.ConnectionString);
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = $"{DISABLE_CONSTRAINTS}{Environment.NewLine}{statement}";
+                    LogStatement(opts, statement);
+                    try
                     {
-                        using (var conn = ConnectionFactory.Open(connectionStringProvider.ConnectionString))
-                        using (var cmd = conn.CreateCommand())
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch (MySqlException ex)
+                    {
+                        if (opts.StopOnError)
                         {
-                            cmd.CommandText = $"{DISABLE_CONSTRAINTS}{Environment.NewLine}{statement}";
-                            LogStatement(opts, statement);
-                            try
-                            {
-                                cmd.ExecuteNonQuery();
-                            }
-                            catch (MySqlException ex)
-                            {
-                                if (opts.StopOnError)
-                                {
-                                    throw;
-                                }
-
-                                Console.WriteLine($"[FAIL] {ex.Message}");
-                            }
+                            throw;
                         }
+
+                        Console.WriteLine($"[FAIL] {ex.Message}");
                     }
                 }
             });
