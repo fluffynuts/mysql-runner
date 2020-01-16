@@ -39,12 +39,14 @@ namespace mysql_runner
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $"select * from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME = '{dbName}';";
             using var reader = cmd.ExecuteReader();
-            if (!reader.Read())
+            if (reader.Read())
             {
-                reader.Close();
-                cmd.CommandText = $"create database `{dbName}`;";
-                cmd.ExecuteNonQuery();
+                return;
             }
+
+            reader.Close();
+            cmd.CommandText = $"create database `{dbName}`;";
+            cmd.ExecuteNonQuery();
         }
 
         private static void RunAllScriptFiles(Options opts, ConnectionStringProvider connectionStringProvider)
