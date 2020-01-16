@@ -9,6 +9,7 @@ namespace mysql_runner
     {
         private StreamReader _reader;
         private readonly List<string> _parts = new List<string>();
+        public long LastReadBytes { get; private set; }
 
         public StatementReader(string filePath)
         {
@@ -17,12 +18,14 @@ namespace mysql_runner
 
         public string Next()
         {
+            LastReadBytes = 0;
             lock (_parts)
             {
                 _parts.Clear();
                 do
                 {
                     var line = _reader.ReadLine();
+                    LastReadBytes += line?.Length ?? 0;
                     line = StripComments(line);
                     if (line == null)
                     {

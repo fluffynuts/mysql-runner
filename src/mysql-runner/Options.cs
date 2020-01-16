@@ -15,13 +15,14 @@ namespace mysql_runner
 
         public List<string> Files { get; } = new List<string>();
 
-        public bool Quiet { get; set; }
+        public bool Verbose { get; set; }
         public bool StopOnError { get; set; }
         public string Database { get; set; }
         public bool ShowedHelp { get; set; }
 
         public bool IsValid { get; set; }
         private bool ShouldPromptForPassword { get; set; }
+        public bool NoProgress { get; set; }
 
         public Options(string[] args)
         {
@@ -85,11 +86,17 @@ namespace mysql_runner
         private Dictionary<string, Action<Options>> FlagHandlers =
             new Dictionary<string, Action<Options>>()
             {
-                ["-q"] = SetQuiet,
+                ["-v"] = SetVerbose,
                 ["-s"] = SetStopOnError,
                 ["--help"] = ShowHelp,
-                ["--prompt"] = SetShouldPromptForPassword
+                ["--prompt"] = SetShouldPromptForPassword,
+                ["--no-progress"] = SetNoProgress
             };
+
+        private static void SetNoProgress(Options obj)
+        {
+            obj.NoProgress = true;
+        }
 
         private static void SetShouldPromptForPassword(Options obj)
         {
@@ -132,9 +139,9 @@ namespace mysql_runner
             obj.StopOnError = true;
         }
 
-        private static void SetQuiet(Options obj)
+        private static void SetVerbose(Options obj)
         {
-            obj.Quiet = true;
+            obj.Verbose = true;
         }
 
         private Dictionary<string, Action<Options, string>> OptionHandlers =
@@ -156,12 +163,13 @@ namespace mysql_runner
                 "  where options are of:",
                 "  -d {database}    set database (no default)",
                 "  -h {host}        set database host (defaults to localhost)",
+                "  --no-progress    disable progress on quiet operation",
                 "  -p {password}    set password to log in with (defaults empty)",
                 "  --prompt         will prompt for password",
                 "  -P {port}        set port (defaults to 3306}",
                 "  -s               stop on error (defaults to carry on)",
-                "  -q               quiet operations",
                 "  -u {user}        set user to log in with (defaults to root)",
+                "  -v               verbose operations (echo statements)"
             }.ForEach(line =>
             {
                 Console.WriteLine(line);
