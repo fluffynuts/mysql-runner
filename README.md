@@ -6,16 +6,17 @@ resuming backups from existing sources without IGNOREs
 Run with `--help` to get help any time and forget about this doc (:
 
 ```
-Usage: mysql-runner {options} <file.sql> {<file.sql>...}
-  options:
-  -d            Database name (required)
-  -h            MySql host (default: localhost)
-  -u            MySql user (required)
-  -p            MySql password (required)
-  -P            port (default 3306)
-  -q            operate quietly
-  -s            stop on errors (defaults is to report and continue)
-  --help        this help
+MySql Runner
+Usage: mysql-runner [options] script.sql ... {script2.sql}
+  where options are of:
+  -d {database}    set database (no default)
+  -h {host}        set database host (defaults to localhost)
+  -p {password}    set password to log in with (defaults empty)
+  --prompt         will prompt for password
+  -P {port}        set port (defaults to 3306}
+  -s               stop on error (defaults to carry on)
+  -q               quiet operations
+  -u {user}        set user to log in with (defaults to root)
 ```
 
 ## why?
