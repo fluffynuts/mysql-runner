@@ -103,6 +103,7 @@ namespace mysql_runner
             obj.ShouldPromptForPassword = true;
         }
 
+        // adapted from https://stackoverflow.com/a/3404522/1697008
         private static void PromptForPassword(Options obj)
         {
             Console.Out.Write("Please enter password: ");
