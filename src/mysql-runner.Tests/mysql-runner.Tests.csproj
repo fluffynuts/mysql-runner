@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>mysql_runner.tests</RootNamespace>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NExpect" Version="1.0.186" />
+    <PackageReference Include="NUnit" Version="3.12.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+    <PackageReference Include="PeanutButter.RandomGenerators" Version="1.2.388" />
+    <PackageReference Include="PeanutButter.Utils" Version="1.2.388" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\mysql-runner\mysql-runner.csproj" />
+  </ItemGroup>
+
+</Project>

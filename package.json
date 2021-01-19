@@ -2,7 +2,6 @@
     "name": "mysql-runner",
     "version": "1.0.0",
     "description": "A brute-force mysql file runner, eg for (mostly) restoring wonky backups",
-    "main": "gulpfile.js",
     "scripts": {
         "test": "run-s \"zarro test-dotnet\"",
         "publish": "cross-env DOTNET_PUBLISH_RUNTIMES=win10-x64 run-s \"zarro dotnet-publish\"",
@@ -22,6 +21,6 @@
     "homepage": "https://github.com/fluffynuts/mysql-runner#readme",
     "devDependencies": {
         "cross-env": "^7.0.2",
-        "zarro": "^1.18.0"
+        "zarro": "^1.82.0"
     }
 }

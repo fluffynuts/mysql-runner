@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="MySqlConnector" Version="0.61.0" />
-    <PackageReference Include="PeanutButter.Utils" Version="1.2.332" />
+    <PackageReference Include="PeanutButter.Utils" Version="1.2.388" />
   </ItemGroup>
 
 </Project>

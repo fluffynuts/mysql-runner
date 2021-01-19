@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mysql-runner", "mysql-runner\mysql-runner.csproj", "{5D0D83A2-7124-4E37-B060-0FE6A575683E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mysql-runner.Tests", "mysql-runner.Tests\mysql-runner.Tests.csproj", "{4A315C6A-9E3B-4FF5-8A3B-DCE61F27F2DA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{5D0D83A2-7124-4E37-B060-0FE6A575683E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D0D83A2-7124-4E37-B060-0FE6A575683E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5D0D83A2-7124-4E37-B060-0FE6A575683E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A315C6A-9E3B-4FF5-8A3B-DCE61F27F2DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A315C6A-9E3B-4FF5-8A3B-DCE61F27F2DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A315C6A-9E3B-4FF5-8A3B-DCE61F27F2DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A315C6A-9E3B-4FF5-8A3B-DCE61F27F2DA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

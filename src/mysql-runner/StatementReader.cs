@@ -27,20 +27,26 @@ namespace mysql_runner
                     var line = _reader.ReadLine();
                     LastReadBytes += line?.Length ?? 0;
                     line = StripComments(line);
-                    if (line == null)
+                    switch (line)
                     {
-                        return null;
+                        case null:
+                            return Finalise();
+                        case "":
+                            continue;
+                        default:
+                            _parts.Add(line);
+                            break;
                     }
-
-                    if (line == "" || line == ";")
-                    {
-                        continue;
-                    }
-
-                    _parts.Add(line);
                 } while (!IsTerminated(_parts));
 
                 return string.Join(Environment.NewLine, _parts);
+            }
+
+            string Finalise()
+            {
+                return _parts.Count > 0
+                    ? string.Join(Environment.NewLine, _parts)
+                    : null;
             }
         }
 
