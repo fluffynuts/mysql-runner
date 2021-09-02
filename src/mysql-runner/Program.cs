@@ -56,69 +56,44 @@ namespace mysql_runner
                 var info = new FileInfo(file);
                 var readBytes = 0L;
                 using var reader = new StatementReader(file);
-                string[] statements;
+                string statement;
                 using var disposer = new AutoDisposer();
                 var conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
                 var cmd = disposer.Add(conn.CreateCommand());
-                while ((statements = reader.NextBatch(10)) != null)
+                while ((statement = reader.NextBatch(10)) != null)
                 {
                     readBytes += reader.LastReadBytes;
 
-                    var statement = string.Join(Environment.NewLine, statements);
-
-                    if (!RunStatement(opts, connectionStringProvider,
-                        ref conn, ref cmd, statement, readBytes, info, idx, disposer))
+                    cmd.CommandText = $"{DISABLE_CONSTRAINTS}{Environment.NewLine}{statement}";
+                    LogStatement(opts.Verbose, opts.NoProgress, statement, readBytes, info.Length, idx,
+                        opts.Files.Count);
+                    try
                     {
-                        statements.ForEach(s =>
-                            RunStatement(opts, connectionStringProvider,
-                                ref conn, ref cmd, s, readBytes, info, idx, disposer)
-                        );
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch (MySqlException ex)
+                    {
+                        disposer.DisposeNow(cmd);
+                        disposer.DisposeNow(conn);
+                        conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
+                        cmd = disposer.Add(conn.CreateCommand());
+
+                        if (opts.StopOnError)
+                        {
+                            throw;
+                        }
+
+                        if (!opts.Verbose)
+                        {
+                            ClearProgress();
+                            LogStatement(true, true, statement, readBytes, info.Length, idx, opts.Files.Count);
+                        }
+
+                        Console.WriteLine($"[FAIL] {ex.Message}");
                     }
                 }
             });
             ClearProgress();
-        }
-
-        private static bool RunStatement(
-            Options opts,
-            ConnectionStringProvider connectionStringProvider,
-            ref MySqlConnection conn,
-            ref MySqlCommand cmd,
-            string statement,
-            long readBytes,
-            FileInfo info,
-            int idx,
-            AutoDisposer disposer)
-        {
-            cmd.CommandText = $"{DISABLE_CONSTRAINTS}{Environment.NewLine}{statement}";
-            LogStatement(opts.Verbose, opts.NoProgress, statement, readBytes, info.Length, idx,
-                opts.Files.Count);
-            try
-            {
-                cmd.ExecuteNonQuery();
-                return true;
-            }
-            catch (MySqlException ex)
-            {
-                disposer.DisposeNow(cmd);
-                disposer.DisposeNow(conn);
-                conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
-                cmd = disposer.Add(conn.CreateCommand());
-
-                if (opts.StopOnError)
-                {
-                    throw;
-                }
-
-                if (!opts.Verbose)
-                {
-                    ClearProgress();
-                    LogStatement(true, true, statement, readBytes, info.Length, idx, opts.Files.Count);
-                }
-
-                Console.WriteLine($"[FAIL] {ex.Message}");
-                return false;
-            }
         }
 
         private static void LogStatement(
@@ -221,7 +196,7 @@ SET UNIQUE_CHECKS=0;
 
     public static class StatementReaderExtensions
     {
-        public static string[] NextBatch(
+        public static string NextBatch(
             this StatementReader reader,
             int batchSize
         )
@@ -244,7 +219,7 @@ SET UNIQUE_CHECKS=0;
                 return null;
             }
 
-            return collected.ToArray();
+            return string.Join(Environment.NewLine, collected);
         }
     }
 }
