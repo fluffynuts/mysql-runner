@@ -16,7 +16,10 @@ namespace mysql_runner
                 Password = opts.Password,
                 Port = opts.Port,
                 Database = opts.Database,
-                AllowUserVariables = true
+                AllowUserVariables = true,
+                Pooling = true,
+                MinimumPoolSize = 10,
+                MaximumPoolSize = 50
             }.ToString();
             MasterConnectionString = new MySqlConnectionStringBuilder()
             {
@@ -24,7 +27,10 @@ namespace mysql_runner
                 UserID = opts.User,
                 Password = opts.Password,
                 Port = opts.Port,
-                AllowUserVariables = true
+                AllowUserVariables = true,
+                Pooling = true,
+                MinimumPoolSize = 10,
+                MaximumPoolSize = 50
             }.ToString();
         }
     }
