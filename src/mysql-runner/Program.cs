@@ -60,7 +60,7 @@ namespace mysql_runner
                 using var disposer = new AutoDisposer();
                 var conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
                 var cmd = disposer.Add(conn.CreateCommand());
-                while ((statement = reader.NextBatch(10)) != null)
+                while ((statement = reader.Next()) != null)
                 {
                     readBytes += reader.LastReadBytes;
 
@@ -192,34 +192,5 @@ namespace mysql_runner
 SET FOREIGN_KEY_CHECKS=0;
 SET UNIQUE_CHECKS=0;
 ";
-    }
-
-    public static class StatementReaderExtensions
-    {
-        public static string NextBatch(
-            this StatementReader reader,
-            int batchSize
-        )
-        {
-            var read = 0;
-            var collected = new List<string>();
-            string line;
-            while ((line = reader.Next()) != null)
-            {
-                read++;
-                collected.Add(line);
-                if (read >= batchSize)
-                {
-                    break;
-                }
-            }
-
-            if (collected.Count == 0)
-            {
-                return null;
-            }
-
-            return string.Join(Environment.NewLine, collected);
-        }
     }
 }
