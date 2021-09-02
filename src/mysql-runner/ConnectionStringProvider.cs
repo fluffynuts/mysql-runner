@@ -23,6 +23,7 @@ namespace mysql_runner
             }.ToString();
             MasterConnectionString = new MySqlConnectionStringBuilder()
             {
+                // don't specify the db: use the default for the login
                 Server = opts.Host,
                 UserID = opts.User,
                 Password = opts.Password,

@@ -57,20 +57,27 @@ namespace mysql_runner
                 var readBytes = 0L;
                 using var reader = new StatementReader(file);
                 string statement;
+                using var disposer = new AutoDisposer();
+                var conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
+                var cmd = disposer.Add(conn.CreateCommand());
                 while ((statement = reader.Next()) != null)
                 {
                     readBytes += reader.LastReadBytes;
-                    using var conn = ConnectionFactory.Open(connectionStringProvider.ConnectionString);
 
-                    using var cmd = conn.CreateCommand();
                     cmd.CommandText = $"{DISABLE_CONSTRAINTS}{Environment.NewLine}{statement}";
-                    LogStatement(opts.Verbose, opts.NoProgress, statement, readBytes, info.Length, idx, opts.Files.Count);
+                    LogStatement(opts.Verbose, opts.NoProgress, statement, readBytes, info.Length, idx,
+                        opts.Files.Count);
                     try
                     {
                         cmd.ExecuteNonQuery();
                     }
                     catch (MySqlException ex)
                     {
+                        disposer.DisposeNow(cmd);
+                        disposer.DisposeNow(conn);
+                        conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
+                        cmd = disposer.Add(conn.CreateCommand());
+
                         if (opts.StopOnError)
                         {
                             throw;
@@ -103,6 +110,7 @@ namespace mysql_runner
                 Console.WriteLine($"-----{Environment.NewLine}{statement}{Environment.NewLine}-----");
                 return;
             }
+
             if (!noProgress)
             {
                 ShowProgress(file, fileCount, bytesReadSoFar, totalExpectedBytes);
@@ -112,10 +120,11 @@ namespace mysql_runner
         private static int _lastProgressLength = 0;
         private static DateTime _started = DateTime.MinValue;
         private static DateTime _lastProgress = DateTime.MinValue;
+
         private static void ShowProgress(
-            in int file, 
-            in int fileCount, 
-            in long bytesReadSoFar, 
+            in int file,
+            in int fileCount,
+            in long bytesReadSoFar,
             in long totalExpectedBytes)
         {
             if (_started == DateTime.MinValue)
@@ -128,6 +137,7 @@ namespace mysql_runner
                 // don't report more than 1x per second
                 return;
             }
+
             _lastProgress = DateTime.Now;
 
             var runTime = (int)((DateTime.Now - _started).TotalSeconds);
@@ -136,11 +146,11 @@ namespace mysql_runner
             var overwrite = new String(' ', _lastProgressLength);
             var message = $@"File {file + 1} / {
                 fileCount
-                }    {percentComplete:F1}%    ({
-                    HumanReadableTimeFor(runTime)
-                } / {
-                    HumanReadableTimeFor(estimatedTotalTime)
-                }  rem: {HumanReadableTimeFor(estimatedTotalTime - runTime)})";
+            }    {percentComplete:F1}%    ({
+                HumanReadableTimeFor(runTime)
+            } / {
+                HumanReadableTimeFor(estimatedTotalTime)
+            }  rem: {HumanReadableTimeFor(estimatedTotalTime - runTime)})";
             _lastProgressLength = message.Length;
             Console.Out.Write($"\r{overwrite}\r{message}");
             Console.Out.Flush();
