@@ -5,8 +5,9 @@
     <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>mysql_runner</RootNamespace>
     <PublishTrimmed>true</PublishTrimmed>
-    <PublishSingleFile>true</PublishSingleFile>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
   <PropertyGroup>
     <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>

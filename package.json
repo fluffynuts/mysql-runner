@@ -5,6 +5,7 @@
     "scripts": {
         "test": "run-s \"zarro test-dotnet\"",
         "publish": "cross-env DOTNET_PUBLISH_RUNTIMES=win10-x64 run-s \"zarro dotnet-publish\"",
+        "publish-local": "run-s \"zarro publish-local\"",
         "zarro": "cross-env DOTNET_CORE=1 BUILD_TOOLS_FOLDER=tools zarro",
         "build": "run-s \"zarro build\"",
         "pack": "BUILD_CONFIGURATION=Release run-s \"zarro pack\""
@@ -21,6 +22,7 @@
     "homepage": "https://github.com/fluffynuts/mysql-runner#readme",
     "devDependencies": {
         "cross-env": "^7.0.2",
-        "zarro": "^1.82.0"
+        "yafs": "^1.22.0",
+        "zarro": "^1.94.0"
     }
 }

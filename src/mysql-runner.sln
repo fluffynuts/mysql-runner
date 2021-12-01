@@ -4,6 +4,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mysql-runner", "mysql-runne
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mysql-runner.Tests", "mysql-runner.Tests\mysql-runner.Tests.csproj", "{4A315C6A-9E3B-4FF5-8A3B-DCE61F27F2DA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".infrastructure", ".infrastructure", "{B552159C-B174-41E6-8B2D-DED78CAEF161}"
+	ProjectSection(SolutionItems) = preProject
+		..\package.json = ..\package.json
+		..\local-tasks\copy-local.js = ..\local-tasks\copy-local.js
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
