@@ -12,12 +12,13 @@ namespace mysql_runner
         public string User { get; set; } = "root";
         public string Password { get; set; }
         public uint Port { get; set; } = 3306;
+        public string Database { get; set; }
+        public bool OverwriteExisting { get; set; }
 
-        public List<string> Files { get; } = new List<string>();
+        public List<string> Files { get; } = new();
 
         public bool Verbose { get; set; }
         public bool StopOnError { get; set; }
-        public string Database { get; set; }
         public bool ShowedHelp { get; set; }
 
         public bool IsValid { get; set; }
@@ -56,7 +57,7 @@ namespace mysql_runner
                     continue;
                 }
 
-                if (FlagHandlers.TryGetValue(arg, out var thisFlagHandler))
+                if (_flagHandlers.TryGetValue(arg, out var thisFlagHandler))
                 {
                     thisFlagHandler.Invoke(this);
                     continue;
@@ -83,15 +84,21 @@ namespace mysql_runner
             }
         }
 
-        private Dictionary<string, Action<Options>> FlagHandlers =
-            new Dictionary<string, Action<Options>>()
+        private readonly Dictionary<string, Action<Options>> _flagHandlers =
+            new()
             {
                 ["-v"] = SetVerbose,
                 ["-s"] = SetStopOnError,
                 ["--help"] = ShowHelp,
                 ["--prompt"] = SetShouldPromptForPassword,
-                ["--no-progress"] = SetNoProgress
+                ["--no-progress"] = SetNoProgress,
+                ["--overwrite-existing"] = SetOverwriteExisting
             };
+
+        private static void SetOverwriteExisting(Options obj)
+        {
+            obj.OverwriteExisting = true;
+        }
 
         private static void SetNoProgress(Options obj)
         {
@@ -162,15 +169,16 @@ namespace mysql_runner
                 "MySql Runner",
                 "Usage: mysql-runner {options} <file.sql> {<file.sql>...}",
                 "  where options are of:",
-                "  -d {database}    set database (no default)",
-                "  -h {host}        set database host (defaults to localhost)",
-                "  --no-progress    disable progress on quiet operation",
-                "  -p {password}    set password to log in with (defaults empty)",
-                "  --prompt         will prompt for password",
-                "  -P {port}        set port (defaults to 3306}",
-                "  -s               stop on error (defaults to carry on)",
-                "  -u {user}        set user to log in with (defaults to root)",
-                "  -v               verbose operations (echo statements)"
+                "  -d {database}         set database (no default)",
+                "  -h {host}             set database host (defaults to localhost)",
+                "  --no-progress         disable progress on quiet operation",
+                "  --overwrite-existing  overwrite any existing target schema, if found",
+                "  -p {password}         set password to log in with (defaults empty)",
+                "  --prompt              will prompt for password",
+                "  -P {port}             set port (defaults to 3306}",
+                "  -s                    stop on error (defaults to carry on)",
+                "  -u {user}             set user to log in with (defaults to root)",
+                "  -v                    verbose operations (echo statements)"
             }.ForEach(line =>
             {
                 Console.WriteLine(line);

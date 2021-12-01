@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
-using System.Text.RegularExpressions;
 using MySql.Data.MySqlClient;
 using PeanutButter.Utils;
 
@@ -24,27 +22,37 @@ namespace mysql_runner
             }
 
             var connectionStringProvider = new ConnectionStringProvider(opts);
-            CreateDatabaseIfRequired(opts.Database, connectionStringProvider);
+            CreateDatabaseIfRequired(opts, connectionStringProvider);
             RunAllScriptFiles(opts, connectionStringProvider);
             return 0;
         }
 
         private static void CreateDatabaseIfRequired(
-            string dbName,
+            Options options,
             ConnectionStringProvider connectionStringProvider)
         {
-            dbName = dbName.Replace("'", "''");
+            var dbName = options.Database.Replace("'", "''");
             using var conn = new MySqlConnection(connectionStringProvider.MasterConnectionString);
             conn.Open();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $"select * from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME = '{dbName}';";
             using var reader = cmd.ExecuteReader();
-            if (reader.Read())
+            var exists = reader.Read();
+            reader.Close();
+            if (exists)
             {
-                return;
+                if (!options.OverwriteExisting)
+                {
+                    return;
+                }
+            }
+            
+            if (exists)
+            {
+                cmd.CommandText = $"drop database `{dbName}`";
+                cmd.ExecuteNonQuery();
             }
 
-            reader.Close();
             cmd.CommandText = $"create database `{dbName}`;";
             cmd.ExecuteNonQuery();
         }
@@ -140,17 +148,17 @@ namespace mysql_runner
 
             _lastProgress = DateTime.Now;
 
-            var runTime = (int)((DateTime.Now - _started).TotalSeconds);
+            var runTime = (decimal)((DateTime.Now - _started).TotalSeconds);
             var percentComplete = (100M * bytesReadSoFar) / totalExpectedBytes;
-            var estimatedTotalTime = 100 * (int)(runTime / percentComplete);
+            var estimatedTotalTime = 100M * (runTime / percentComplete);
             var overwrite = new String(' ', _lastProgressLength);
             var message = $@"File {file + 1} / {
                 fileCount
             }    {percentComplete:F1}%    ({
-                HumanReadableTimeFor(runTime)
+                HumanReadableTimeFor((int)runTime)
             } / {
-                HumanReadableTimeFor(estimatedTotalTime)
-            }  rem: {HumanReadableTimeFor(estimatedTotalTime - runTime)})";
+                HumanReadableTimeFor((int)estimatedTotalTime)
+            }  rem: {HumanReadableTimeFor((int)(estimatedTotalTime - runTime))})";
             _lastProgressLength = message.Length;
             Console.Out.Write($"\r{overwrite}\r{message}");
             Console.Out.Flush();

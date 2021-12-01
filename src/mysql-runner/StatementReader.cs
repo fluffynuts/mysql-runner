@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace mysql_runner
 {
@@ -15,6 +16,11 @@ namespace mysql_runner
         {
             _reader = new StreamReader(filePath);
         }
+
+        private static readonly Regex DelimiterMatcher = new Regex("^\\s*DELIMITER\\s*([^\\s]*)");
+        private const string DEFAULT_DELIMITER = ";";
+        private string _currentDelimiter = DEFAULT_DELIMITER;
+        private int _currentBlockLevel = 0;
 
         public string Next()
         {
@@ -93,7 +99,61 @@ namespace mysql_runner
                 return false;
             }
 
-            return last[last.Length - 1] == ';';
+            var agnosticLast = last.Trim(';').Trim().ToLower();
+            if (agnosticLast == "begin")
+            {
+                _currentBlockLevel++;
+                return false;
+            }
+
+            if (agnosticLast == "end")
+            {
+                _currentBlockLevel--;
+                if (_currentBlockLevel < 0)
+                {
+                    Console.Error.WriteLine(
+                        $"Achieved negative block level examining the last line of:\n----\n${string.Join("\n", parts)}\n"
+                    );
+                    _currentBlockLevel = 0;
+                }
+
+                if (_currentBlockLevel == 0)
+                {
+                    return true;
+                }
+            }
+
+            if (_currentBlockLevel > 0)
+            {
+                return false;
+            }
+
+            if (last.Length < _currentDelimiter.Length)
+            {
+                return false;
+            }
+
+
+            var delimiterMatches = DelimiterMatcher.Match(last);
+            var delimiter = delimiterMatches.Groups
+                .OfType<Group>()
+                .Skip(1)
+                .FirstOrDefault()
+                ?.Value;
+
+            if (delimiter is not null)
+            {
+                _currentDelimiter = delimiter;
+            }
+
+            if (_currentDelimiter != DEFAULT_DELIMITER)
+            {
+                // in a magically-delimited block
+                return false;
+            }
+
+            var lastNChars = last.Substring(last.Length - _currentDelimiter.Length);
+            return lastNChars == _currentDelimiter;
         }
 
         public void Dispose()
