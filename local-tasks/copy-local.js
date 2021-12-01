@@ -22,9 +22,25 @@ gulp.task("publish-local", ["publish-for-platform"], async () => {
     const
         artifact = await findPublishedArtifact(),
         target = resolveHomePath(".local/bin");
+    warnIfNotInPath(target);
     await mkdir(target);
     await copyFile(artifact, target, CopyFileOptions.overwriteExisting);
 });
+
+function warnIfNotInPath(folder) {
+    const 
+        delimiter = os.platform() === "win32" ? ";" : ":",
+        caseSensitive = os.platform() !== "win32",
+        folderCopy = caseSensitive ? folder : folder.toLowerCase(),
+        parts = (process.env.PATH || "").split(delimiter),
+        foundInPath = parts.reduce((acc, cur) => {
+            const compare = caseSensitive ? cur : cur.toLowerCase();
+            return acc || compare === folderCopy;
+        }, false);
+    if (!foundInPath) {
+        console.warn(`publish artifact will be copied to "${folder}" which is not currently in your path (update your PATH environment variable)`);
+    }
+}
 
 const publishTargets = {
     "linux": "linux-x64",
