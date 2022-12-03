@@ -23,6 +23,6 @@
     "devDependencies": {
         "cross-env": "^7.0.2",
         "yafs": "^1.22.0",
-        "zarro": "^1.94.0"
+        "zarro": "^1.122.0"
     }
 }
