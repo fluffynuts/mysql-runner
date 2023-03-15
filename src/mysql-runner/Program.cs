@@ -1,8 +1,8 @@
-﻿using System;
+﻿using MySql.Data.MySqlClient;
+using PeanutButter.Utils;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using MySql.Data.MySqlClient;
-using PeanutButter.Utils;
 
 namespace mysql_runner
 {
@@ -46,7 +46,7 @@ namespace mysql_runner
                     return;
                 }
             }
-            
+
             if (exists)
             {
                 cmd.CommandText = $"drop database `{dbName}`";
@@ -63,7 +63,7 @@ namespace mysql_runner
             {
                 var info = new FileInfo(file);
                 var readBytes = 0L;
-                using var reader = new StatementReader(file);
+                using var reader = new StatementReader(file, opts);
                 string statement;
                 using var disposer = new AutoDisposer();
                 var conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));

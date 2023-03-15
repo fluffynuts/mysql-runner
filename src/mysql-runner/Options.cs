@@ -22,6 +22,7 @@ namespace mysql_runner
         public bool ShowedHelp { get; set; }
 
         public bool IsValid { get; set; }
+        public bool IncludeMySqlSpecificComments { get; set; }
         private bool ShouldPromptForPassword { get; set; }
         public bool NoProgress { get; set; }
 
@@ -92,8 +93,14 @@ namespace mysql_runner
                 ["--help"] = ShowHelp,
                 ["--prompt"] = SetShouldPromptForPassword,
                 ["--no-progress"] = SetNoProgress,
-                ["--overwrite-existing"] = SetOverwriteExisting
+                ["--overwrite-existing"] = SetOverwriteExisting,
+                ["--include-mysql-comments"] = SetMySqlComments
             };
+
+        private static void SetMySqlComments(Options obj)
+        {
+            obj.IncludeMySqlSpecificComments = true;
+        }
 
         private static void SetOverwriteExisting(Options obj)
         {
@@ -169,16 +176,17 @@ namespace mysql_runner
                 "MySql Runner",
                 "Usage: mysql-runner {options} <file.sql> {<file.sql>...}",
                 "  where options are of:",
-                "  -d {database}         set database (no default)",
-                "  -h {host}             set database host (defaults to localhost)",
-                "  --no-progress         disable progress on quiet operation",
-                "  --overwrite-existing  overwrite any existing target schema, if found",
-                "  -p {password}         set password to log in with (defaults empty)",
-                "  --prompt              will prompt for password",
-                "  -P {port}             set port (defaults to 3306}",
-                "  -s                    stop on error (defaults to carry on)",
-                "  -u {user}             set user to log in with (defaults to root)",
-                "  -v                    verbose operations (echo statements)"
+                "  -d {database}            set database (no default)",
+                "  -h {host}                set database host (defaults to localhost)",
+                "  --no-progress            disable progress on quiet operation",
+                "  --overwrite-existing     overwrite any existing target schema, if found",
+                "  --include-mysql-comments include runnable mysql specific comments ex. /*!50003 create*/",
+                "  -p {password}            set password to log in with (defaults empty)",
+                "  --prompt                 will prompt for password",
+                "  -P {port}                set port (defaults to 3306}",
+                "  -s                       stop on error (defaults to carry on)",
+                "  -u {user}                set user to log in with (defaults to root)",
+                "  -v                       verbose operations (echo statements)"
             }.ForEach(line =>
             {
                 Console.WriteLine(line);

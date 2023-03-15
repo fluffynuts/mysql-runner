@@ -9,18 +9,22 @@ namespace mysql_runner
     public class StatementReader : IDisposable
     {
         private StreamReader _reader;
+        private Options _opts;
         private readonly List<string> _parts = new List<string>();
         public long LastReadBytes { get; private set; }
 
-        public StatementReader(string filePath)
+        public StatementReader(string filePath, Options opts)
         {
             _reader = new StreamReader(filePath);
+            _opts = opts;
         }
 
         private static readonly Regex DelimiterMatcher = new Regex("^\\s*DELIMITER\\s*([^\\s]*)");
         private const string DEFAULT_DELIMITER = ";";
         private string _currentDelimiter = DEFAULT_DELIMITER;
         private int _currentBlockLevel = 0;
+        private int _lastBlockStartIndex = 0;
+        private bool _openComment = false;
 
         public string Next()
         {
@@ -28,6 +32,7 @@ namespace mysql_runner
             lock (_parts)
             {
                 _parts.Clear();
+                _lastBlockStartIndex = -1;
                 do
                 {
                     var line = _reader.ReadLine();
@@ -63,27 +68,56 @@ namespace mysql_runner
                 return null;
             }
 
+            var end = line.LastIndexOf("*/");
+            if (_openComment)
+            {
+                if (end == -1)
+                {
+                    return "";
+                }
+                else
+                {
+                    _openComment = false;
+                    return "";
+                }
+            }
+
             if (line.StartsWith("--"))
             {
                 return "";
             }
 
             var start = line.IndexOf("/*");
+
+            while (start > -1 && line.Length > start && _opts.IncludeMySqlSpecificComments)
+            {
+                //MySql specific comments
+                if (line[start + 2] == '!')
+                {
+                    start = line.IndexOf("/*", start + 1);
+                }
+                //Valid comment
+                else
+                {
+                    break;
+                }
+            }
+
             if (start != 0)
             {
                 // naive: assumes no mid-line comments; but this is how mysqldump makes it
-                // also assumes no multi-line comments
                 return line;
             }
 
-            var end = line.LastIndexOf("*/");
             if (end == -1)
             {
-                // broken? or perhaps multi-line (not catered for)
+                //Start multi line comment
+                _openComment = true;
                 return "";
             }
 
-            return line.Substring(end + 2);
+            //Multi comments in a single line where the last comment is still open requires some recursion
+            return StripComments(line.Substring(end + 2).Trim());
         }
 
         private bool IsTerminated(List<string> parts)
@@ -99,15 +133,23 @@ namespace mysql_runner
                 return false;
             }
 
+            // Prevent double counting in case nothing was added to the parts
+            if (_lastBlockStartIndex == parts.Count)
+            {
+                return false;
+            }
+
             var agnosticLast = last.Trim(';').Trim().ToLower();
             if (agnosticLast == "begin")
             {
+                _lastBlockStartIndex = parts.Count;
                 _currentBlockLevel++;
                 return false;
             }
 
             if (agnosticLast == "end")
             {
+                _lastBlockStartIndex = parts.Count;
                 _currentBlockLevel--;
                 if (_currentBlockLevel < 0)
                 {
@@ -132,7 +174,6 @@ namespace mysql_runner
             {
                 return false;
             }
-
 
             var delimiterMatches = DelimiterMatcher.Match(last);
             var delimiter = delimiterMatches.Groups
