@@ -1,8 +1,8 @@
-﻿using System;
+﻿using MySql.Data.MySqlClient;
+using PeanutButter.Utils;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using MySql.Data.MySqlClient;
-using PeanutButter.Utils;
 
 namespace mysql_runner
 {
@@ -46,7 +46,7 @@ namespace mysql_runner
                     return;
                 }
             }
-            
+
             if (exists)
             {
                 cmd.CommandText = $"drop database `{dbName}`";
@@ -63,7 +63,7 @@ namespace mysql_runner
             {
                 var info = new FileInfo(file);
                 var readBytes = 0L;
-                using var reader = new StatementReader(file);
+                using var reader = new StatementReader(file, opts);
                 string statement;
                 using var disposer = new AutoDisposer();
                 var conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
@@ -152,13 +152,7 @@ namespace mysql_runner
             var percentComplete = (100M * bytesReadSoFar) / totalExpectedBytes;
             var estimatedTotalTime = 100M * (runTime / percentComplete);
             var overwrite = new String(' ', _lastProgressLength);
-            var message = $@"File {file + 1} / {
-                fileCount
-            }    {percentComplete:F1}%    ({
-                HumanReadableTimeFor((int)runTime)
-            } / {
-                HumanReadableTimeFor((int)estimatedTotalTime)
-            }  rem: {HumanReadableTimeFor((int)(estimatedTotalTime - runTime))})";
+            var message = $@"File {file + 1} / {fileCount}    {percentComplete:F1}%    ({HumanReadableTimeFor((int)runTime)} / {HumanReadableTimeFor((int)estimatedTotalTime)}  rem: {HumanReadableTimeFor((int)(estimatedTotalTime - runTime))})";
             _lastProgressLength = message.Length;
             Console.Out.Write($"\r{overwrite}\r{message}");
             Console.Out.Flush();

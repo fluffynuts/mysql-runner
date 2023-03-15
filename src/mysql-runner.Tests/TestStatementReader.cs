@@ -1,10 +1,9 @@
+using MySql.Data.MySqlClient;
+using NExpect;
+using NUnit.Framework;
+using PeanutButter.Utils;
 using System;
 using System.Collections.Generic;
-using MySql.Data.MySqlClient;
-using NUnit.Framework;
-using static PeanutButter.RandomGenerators.RandomValueGen;
-using NExpect;
-using PeanutButter.Utils;
 using static NExpect.Expectations;
 
 namespace mysql_runner.tests
@@ -263,7 +262,7 @@ END*/
 
         private StatementReader Create(string filePath, string[] args = null)
         {
-            if(args == null)
+            if (args == null)
                 args = new string[0];
 
             return new StatementReader(filePath, new Options(args));
