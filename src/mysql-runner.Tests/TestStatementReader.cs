@@ -115,6 +115,36 @@ END
         }
 
         [Test]
+        public void ShouldCountBeginEndBlockOnlyOnce()
+        {
+            // Arrange
+            var statementA = "insert into `logs` (`message`) values ('should be included');";
+            var statementB = "insert into `logs` (`message`) values ('should not be included');";
+
+            var someTrigger = $@"
+AFTER UPDATE ON some_table
+FOR EACH ROW
+BEGIN
+--This comment causes double counting
+    {statementA}
+END
+BEGIN
+--This statement block should not be in the list
+    {statementB}
+END
+";
+            using var file = new AutoTempFile(someTrigger);
+            using var sut = Create(file.Path);
+
+            // Act
+            var result = sut.Next();
+
+            // Assert
+            Expect(result).To.Contain(statementA);
+            Expect(result).To.Not.Contain(statementB);
+        }
+
+        [Test]
         [Explicit("this may not be possible - see the integration test below")]
         public void ShouldIncorporateDelimiterStatementsInPairs()
         {
@@ -166,6 +196,7 @@ DELIMITER ;
             conn.Open();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
+
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
@@ -174,9 +205,68 @@ DELIMITER ;
             // Assert
         }
 
-        private StatementReader Create(string filePath)
+        [Test]
+        public void ShouldExcludeMySqlSpecificComments()
         {
-            return new StatementReader(filePath);
+            // Arrange
+            var someTrigger = $@"/*!50001 Create*/";
+
+            using var file = new AutoTempFile(someTrigger);
+            using var sut = Create(file.Path);
+
+            // Act
+            var result = sut.Next();
+
+            // Assert
+            Expect(result).To.Be.Null();
+        }
+
+        [Test]
+        public void ShouldIncludeMySqlSpecificComments()
+        {
+            // Arrange
+            var someTrigger = $@"/*!50001 Create*/";
+
+            using var file = new AutoTempFile(someTrigger);
+            using var sut = Create(file.Path, new string[] { "--include-mysql-comments" });
+
+            // Act
+            var result = sut.Next();
+
+            // Assert
+            Expect(result).To.Equal(someTrigger);
+        }
+
+        [Test]
+        public void ShouldExcludeMultilineComments()
+        {
+            // Arrange
+            var someTrigger = $@"/*!50001 MySqlSpecific Comment
+AFTER UPDATE ON some_table
+FOR EACH ROW
+BEGIN
+    IF NEW.`flag` <> OLD.`flag`
+    THEN
+        insert into `logs` (`message`) values ('flag changed');
+    END IF
+END*/
+";
+            using var file = new AutoTempFile(someTrigger);
+            using var sut = Create(file.Path);
+
+            // Act
+            var result = sut.Next();
+
+            // Assert
+            Expect(result).To.Be.Null();
+        }
+
+        private StatementReader Create(string filePath, string[] args = null)
+        {
+            if(args == null)
+                args = new string[0];
+
+            return new StatementReader(filePath, new Options(args));
         }
     }
 
