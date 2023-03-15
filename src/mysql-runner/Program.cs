@@ -152,7 +152,13 @@ namespace mysql_runner
             var percentComplete = (100M * bytesReadSoFar) / totalExpectedBytes;
             var estimatedTotalTime = 100M * (runTime / percentComplete);
             var overwrite = new String(' ', _lastProgressLength);
-            var message = $@"File {file + 1} / {fileCount}    {percentComplete:F1}%    ({HumanReadableTimeFor((int)runTime)} / {HumanReadableTimeFor((int)estimatedTotalTime)}  rem: {HumanReadableTimeFor((int)(estimatedTotalTime - runTime))})";
+            var message = $@"File {file + 1} / {
+                fileCount
+            }    {percentComplete:F1}%    ({
+                HumanReadableTimeFor((int)runTime)
+            } / {
+                HumanReadableTimeFor((int)estimatedTotalTime)
+            }  rem: {HumanReadableTimeFor((int)(estimatedTotalTime - runTime))})";
             _lastProgressLength = message.Length;
             Console.Out.Write($"\r{overwrite}\r{message}");
             Console.Out.Flush();

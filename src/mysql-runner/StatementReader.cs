@@ -106,7 +106,6 @@ namespace mysql_runner
             if (start != 0)
             {
                 // naive: assumes no mid-line comments; but this is how mysqldump makes it
-                // also assumes no multi-line comments
                 return line;
             }
 
@@ -135,20 +134,22 @@ namespace mysql_runner
             }
 
             // Prevent double counting in case nothing was added to the parts
-            if (_lastBlockStartIndex == parts.Count())
+            if (_lastBlockStartIndex == parts.Count)
+            {
                 return false;
+            }
 
             var agnosticLast = last.Trim(';').Trim().ToLower();
             if (agnosticLast == "begin")
             {
-                _lastBlockStartIndex = parts.Count();
+                _lastBlockStartIndex = parts.Count;
                 _currentBlockLevel++;
                 return false;
             }
 
             if (agnosticLast == "end")
             {
-                _lastBlockStartIndex = parts.Count();
+                _lastBlockStartIndex = parts.Count;
                 _currentBlockLevel--;
                 if (_currentBlockLevel < 0)
                 {
@@ -173,7 +174,6 @@ namespace mysql_runner
             {
                 return false;
             }
-
 
             var delimiterMatches = DelimiterMatcher.Match(last);
             var delimiter = delimiterMatches.Groups
