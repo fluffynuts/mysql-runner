@@ -3,12 +3,12 @@
     "version": "1.0.0",
     "description": "A brute-force mysql file runner, eg for (mostly) restoring wonky backups",
     "scripts": {
-        "test": "run-s \"zarro test-dotnet\"",
-        "publish": "cross-env DOTNET_PUBLISH_RUNTIMES=win10-x64 run-s \"zarro dotnet-publish\"",
-        "publish-local": "run-s \"zarro publish-local\"",
-        "zarro": "cross-env DOTNET_CORE=1 BUILD_TOOLS_FOLDER=tools zarro",
-        "build": "run-s \"zarro build\"",
-        "pack": "BUILD_CONFIGURATION=Release run-s \"zarro pack\""
+        "test": "zarro test-dotnet",
+        "publish": "zarro dotnet-publish",
+        "publish-local": "zarro publish-local",
+        "zarro": "zarro",
+        "build": "zarro @",
+        "pack": "zarro @"
     },
     "repository": {
         "type": "git",
@@ -23,6 +23,6 @@
     "devDependencies": {
         "cross-env": "^7.0.2",
         "yafs": "^1.22.0",
-        "zarro": "^1.122.0"
+        "zarro": "^1.149.0"
     }
 }
