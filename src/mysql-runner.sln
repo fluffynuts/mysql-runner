@@ -8,6 +8,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".infrastructure", ".infrast
 	ProjectSection(SolutionItems) = preProject
 		..\package.json = ..\package.json
 		..\local-tasks\copy-local.js = ..\local-tasks\copy-local.js
+		..\local-tasks\publish-local.js = ..\local-tasks\publish-local.js
+		..\.zarro-defaults = ..\.zarro-defaults
 	EndProjectSection
 EndProject
 Global
