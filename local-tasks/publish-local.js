@@ -61,10 +61,12 @@ function determinePublishTarget() {
 async function findPublishedArtifact() {
     const
         publishTarget = determinePublishTarget(),
+        isWindows = os.platform() === "windows",
+        suffix = isWindows ? ".exe" : "",
         artifacts = await ls("src", {
             entities: FsEntities.files,
             fullPaths: true,
-            match: new RegExp(`mysql-runner[\\\\/]bin(\\\\|/)*.*${publishTarget}.*publish.*mysql-runner.exe$`),
+            match: new RegExp(`mysql-runner[\\\\/]bin(\\\\|/)*.*${publishTarget}.*publish.*mysql-runner${suffix}$`),
             recurse: true
         });
     if (artifacts.length === 1) {
