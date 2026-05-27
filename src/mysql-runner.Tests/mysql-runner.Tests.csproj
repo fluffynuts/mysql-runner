@@ -8,10 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MySql.Data" Version="9.7.0" />
     <PackageReference Include="NExpect" Version="2.0.125" />
     <PackageReference Include="NUnit" Version="4.6.1" />
     <PackageReference Include="NUnit3TestAdapter" Version="6.2.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageReference Include="PeanutButter.FileSystem" Version="3.0.418" />
     <PackageReference Include="PeanutButter.RandomGenerators" Version="3.0.418" />
     <PackageReference Include="PeanutButter.TempDb.MySql.Connector" Version="3.0.418" />
     <PackageReference Include="PeanutButter.Utils" Version="3.0.418" />

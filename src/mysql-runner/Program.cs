@@ -1,7 +1,9 @@
 ﻿using PeanutButter.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Text;
 using MySqlConnector;
 
 namespace mysql_runner;
@@ -39,7 +41,7 @@ public static class Program
     private static void HandleUserExit(
         MysqlRestorePerformanceState originalSettings,
         ConnectionStringProvider connectionStringProvider
-        )
+    )
     {
         Console.CancelKeyPress += (sender, e) =>
         {
@@ -93,7 +95,7 @@ public static class Program
 
     private static string CreateNoDbConnectionString(
         ConnectionStringProvider connectionStringProvider
-        )
+    )
     {
         var builder = new MySqlConnectionStringBuilder(
             connectionStringProvider.ConnectionString
@@ -128,7 +130,9 @@ public static class Program
             cmd.ExecuteNonQuery();
         }
 
-        cmd.CommandText = $"create database `{dbName}`;";
+        var characterSet = options.DatabaseCharacterSet.Replace(";", "").Replace("'", "''");
+        var collation = options.DatabaseCollation.Replace(";", "").Replace("'", "''");
+        cmd.CommandText = $"create database `{dbName}` CHARACTER SET {characterSet} collate {collation};";
         cmd.ExecuteNonQuery();
     }
 
@@ -143,11 +147,17 @@ public static class Program
             using var disposer = new AutoDisposer();
             var conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
             var cmd = disposer.Add(conn.CreateCommand());
+            var connectionInfo = new ConnectionInfo(connectionStringProvider.ConnectionString);
             while ((statement = reader.Next()) != null)
             {
                 readBytes += reader.LastReadBytes;
+                if (statement.Contains("_binary '") || statement.Contains("_binary 0x"))
+                {
+                    ExecViaCli(statement, connectionInfo);
+                    continue;
+                }
 
-                cmd.CommandText = $"{DISABLE_CONSTRAINTS}{Environment.NewLine}{statement}";
+                cmd.CommandText = statement;
                 LogStatement(opts.Verbose, opts.NoProgress, statement, readBytes, info.Length, idx,
                     opts.Files.Count);
                 try
@@ -177,6 +187,118 @@ public static class Program
             }
         });
         ClearProgress();
+    }
+
+    private static void ExecViaCli(string statementInLatin1, ConnectionInfo info)
+    {
+        var bytes = Encoding.Latin1.GetBytes(statementInLatin1);
+        ExecuteViaCli(bytes, info);
+    }
+
+    private static void ExecuteViaCli(byte[] statementBytes, ConnectionInfo info)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "mysql",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        psi.ArgumentList.Add("--default-character-set=binary");
+        if (info.Host == "localhost")
+        {
+            psi.ArgumentList.Add("--host=127.0.0.1");
+        }
+        else
+        {
+            psi.ArgumentList.Add($"--host={info.Host}");
+        }
+        psi.ArgumentList.Add($"--port={info.Port}");
+        psi.ArgumentList.Add($"--user={info.User}");
+
+        if (!string.IsNullOrEmpty(info.Database))
+        {
+            psi.ArgumentList.Add(info.Database);
+        }
+
+        // Pass password via env var rather than --password=... to keep it out of process listings
+        psi.EnvironmentVariables["MYSQL_PWD"] = info.Password;
+
+        using var process = Process.Start(psi);
+        if (process is null)
+        {
+            throw new InvalidOperationException("Failed to start mysql process");
+        }
+
+        // Write the statement bytes to stdin
+        process.StandardInput.BaseStream.Write(statementBytes, 0, statementBytes.Length);
+
+        // Ensure the statement is terminated with a semicolon and newline
+        // (mysql CLI expects a terminator before it'll execute)
+        var terminator = new byte[] { (byte)';', (byte)'\n' };
+        process.StandardInput.BaseStream.Write(terminator, 0, terminator.Length);
+
+        process.StandardInput.Close();
+
+        // Read stderr in case of failure — must be read before WaitForExit
+        // to avoid deadlock if stderr fills up its buffer
+        var stderr = process.StandardError.ReadToEnd();
+        var stdout = process.StandardOutput.ReadToEnd();
+
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+            throw new MySqlCliException(
+                $"mysql CLI exited with code {process.ExitCode}: {stderr.Trim()}",
+                stderr,
+                stdout,
+                process.ExitCode
+            );
+        }
+    }
+
+    public class ConnectionInfo
+    {
+        public string Host { get; set; } = "localhost";
+        public uint Port { get; set; } = 3306;
+        public string User { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string Database { get; set; } = "";
+
+        public ConnectionInfo()
+        {
+        }
+
+        public ConnectionInfo(
+            string connectionString
+        )
+        {
+            var builder = new MySqlConnectionStringBuilder(connectionString);
+            Host = builder.Server;
+            Port = builder.Port;
+            User = builder.UserID;
+            Password = builder.Password;
+            Database = builder.Database;
+        }
+    }
+
+    public class MySqlCliException : Exception
+    {
+        public string StdErr { get; }
+        public string StdOut { get; }
+        public int ExitCode { get; }
+
+        public MySqlCliException(string message, string stderr, string stdout, int exitCode)
+            : base(message)
+        {
+            StdErr = stderr;
+            StdOut = stdout;
+            ExitCode = exitCode;
+        }
     }
 
     private static void LogStatement(
@@ -269,10 +391,4 @@ public static class Program
             parts
         );
     }
-
-
-    private const string DISABLE_CONSTRAINTS = @"
-SET FOREIGN_KEY_CHECKS=0;
-SET UNIQUE_CHECKS=0;
-";
 }

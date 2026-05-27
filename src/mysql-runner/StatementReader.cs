@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace mysql_runner
@@ -15,7 +16,7 @@ namespace mysql_runner
 
         public StatementReader(string filePath, Options opts)
         {
-            _reader = new StreamReader(filePath);
+            _reader = new StreamReader(filePath, Encoding.Latin1);
             _opts = opts;
         }
 
