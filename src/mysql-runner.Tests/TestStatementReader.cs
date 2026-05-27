@@ -1,89 +1,87 @@
-using MySql.Data.MySqlClient;
-using NExpect;
 using NUnit.Framework;
 using PeanutButter.Utils;
 using System;
 using System.Collections.Generic;
-using static NExpect.Expectations;
+using MySqlConnector;
 
-namespace mysql_runner.tests
+namespace mysql_runner.tests;
+
+[TestFixture]
+public class TestStatementReader
 {
-    [TestFixture]
-    public class TestStatementReader
+    [Test]
+    public void ShouldRetrieveSingleUnterminatedStatement()
     {
-        [Test]
-        public void ShouldRetrieveSingleUnterminatedStatement()
-        {
-            // Arrange
-            using var file = new AutoTempFile("select * from foo");
-            using var sut = Create(file.Path);
-            // Act
-            var result = sut.ReadAllStatements();
-            // Assert
-            Expect(result)
-                .To.Equal(new[] { "select * from foo" });
-        }
+        // Arrange
+        using var file = new AutoTempFile("select * from foo");
+        using var sut = Create(file.Path);
+        // Act
+        var result = sut.ReadAllStatements();
+        // Assert
+        Expect(result)
+            .To.Equal(new[] { "select * from foo" });
+    }
 
-        [Test]
-        public void ShouldRetrieveASingleTerminatedStatement()
-        {
-            // Arrange
-            using var file = new AutoTempFile("select * from foo;");
-            using var sut = Create(file.Path);
+    [Test]
+    public void ShouldRetrieveASingleTerminatedStatement()
+    {
+        // Arrange
+        using var file = new AutoTempFile("select * from foo;");
+        using var sut = Create(file.Path);
 
-            // Act
-            var result = sut.ReadAllStatements();
-            // Assert
-            Expect(result)
-                .To.Equal(new[] { "select * from foo;" });
-        }
+        // Act
+        var result = sut.ReadAllStatements();
+        // Assert
+        Expect(result)
+            .To.Equal(new[] { "select * from foo;" });
+    }
 
-        [Test]
-        public void ShouldRetrieveTwoTerminatedStatements()
-        {
-            // Arrange
-            using var file = new AutoTempFile(@"
+    [Test]
+    public void ShouldRetrieveTwoTerminatedStatements()
+    {
+        // Arrange
+        using var file = new AutoTempFile(@"
 select * from foo;
 select * from bar;
 ");
-            using var sut = Create(file.Path);
-            // Act
-            var result = sut.ReadAllStatements();
-            // Assert
-            Expect(result)
-                .To.Equal(new[]
-                {
-                    "select * from foo;",
-                    "select * from bar;"
-                });
-        }
+        using var sut = Create(file.Path);
+        // Act
+        var result = sut.ReadAllStatements();
+        // Assert
+        Expect(result)
+            .To.Equal(new[]
+            {
+                "select * from foo;",
+                "select * from bar;"
+            });
+    }
 
-        [Test]
-        public void ShouldRetrieveTwoTerminatedStatementsWithTerminatorInStrangePlace()
-        {
-            // Arrange
-            using var file = new AutoTempFile(@"
+    [Test]
+    public void ShouldRetrieveTwoTerminatedStatementsWithTerminatorInStrangePlace()
+    {
+        // Arrange
+        using var file = new AutoTempFile(@"
 select * from foo
 ;
 select * from bar;
 ");
-            using var sut = Create(file.Path);
-            // Act
-            var result = sut.ReadAllStatements();
-            // Assert
-            Expect(result)
-                .To.Equal(new[]
-                {
-                    $"select * from foo{Environment.NewLine};",
-                    "select * from bar;"
-                });
-        }
+        using var sut = Create(file.Path);
+        // Act
+        var result = sut.ReadAllStatements();
+        // Assert
+        Expect(result)
+            .To.Equal(new[]
+            {
+                $"select * from foo{Environment.NewLine};",
+                "select * from bar;"
+            });
+    }
 
-        [Test]
-        public void ShouldNotSplitOutCodeInBeginEndBlock()
-        {
-            // Arrange
-            var someTrigger = @"
+    [Test]
+    public void ShouldNotSplitOutCodeInBeginEndBlock()
+    {
+        // Arrange
+        var someTrigger = @"
 AFTER UPDATE ON some_table
 FOR EACH ROW
 BEGIN
@@ -93,34 +91,34 @@ BEGIN
     END IF
 END
 ";
-            using var file = new AutoTempFile(someTrigger);
-            using var sut = Create(file.Path);
+        using var file = new AutoTempFile(someTrigger);
+        using var sut = Create(file.Path);
 
-            // Act
-            var result = sut.ReadAllStatements();
-            // Assert
-            Expect(result)
-                .To.Contain.Only(1).Item(
-                    () => string.Join("\n", result)
-                );
-            var sanitizedResult = string.Join(" ", result)
-                .RegexReplace("\\s+", " ")
-                .Trim();
-            var sanitizedTrigger = someTrigger.RegexReplace(
-                "\\s+", " "
-            ).Trim();
-            Expect(sanitizedResult)
-                .To.Equal(sanitizedTrigger);
-        }
+        // Act
+        var result = sut.ReadAllStatements();
+        // Assert
+        Expect(result)
+            .To.Contain.Only(1).Item(
+                () => string.Join("\n", result)
+            );
+        var sanitizedResult = string.Join(" ", result)
+            .RegexReplace("\\s+", " ")
+            .Trim();
+        var sanitizedTrigger = someTrigger.RegexReplace(
+            "\\s+", " "
+        ).Trim();
+        Expect(sanitizedResult)
+            .To.Equal(sanitizedTrigger);
+    }
 
-        [Test]
-        public void ShouldCountBeginEndBlockOnlyOnce()
-        {
-            // Arrange
-            var statementA = "insert into `logs` (`message`) values ('should be included');";
-            var statementB = "insert into `logs` (`message`) values ('should not be included');";
+    [Test]
+    public void ShouldCountBeginEndBlockOnlyOnce()
+    {
+        // Arrange
+        var statementA = "insert into `logs` (`message`) values ('should be included');";
+        var statementB = "insert into `logs` (`message`) values ('should not be included');";
 
-            var someTrigger = $@"
+        var someTrigger = $@"
 AFTER UPDATE ON some_table
 FOR EACH ROW
 BEGIN
@@ -132,23 +130,23 @@ BEGIN
     {statementB}
 END
 ";
-            using var file = new AutoTempFile(someTrigger);
-            using var sut = Create(file.Path);
+        using var file = new AutoTempFile(someTrigger);
+        using var sut = Create(file.Path);
 
-            // Act
-            var result = sut.Next();
+        // Act
+        var result = sut.Next();
 
-            // Assert
-            Expect(result).To.Contain(statementA);
-            Expect(result).To.Not.Contain(statementB);
-        }
+        // Assert
+        Expect(result).To.Contain(statementA);
+        Expect(result).To.Not.Contain(statementB);
+    }
 
-        [Test]
-        [Explicit("this may not be possible - see the integration test below")]
-        public void ShouldIncorporateDelimiterStatementsInPairs()
-        {
-            // Arrange
-            var someTrigger = @"
+    [Test]
+    [Explicit("this may not be possible - see the integration test below")]
+    public void ShouldIncorporateDelimiterStatementsInPairs()
+    {
+        // Arrange
+        var someTrigger = @"
 DELIMITER ;;
 AFTER UPDATE ON some_table
 FOR EACH ROW
@@ -160,87 +158,87 @@ BEGIN
 END;;
 DELIMITER ;
 ";
-            using var file = new AutoTempFile(someTrigger);
-            using var sut = Create(file.Path);
+        using var file = new AutoTempFile(someTrigger);
+        using var sut = Create(file.Path);
 
-            // Act
-            var result = sut.ReadAllStatements();
-            // Assert
-            Expect(result)
-                .To.Contain.Only(1).Item(() => string.Join("\n---\n", result));
-            var sanitizedResult = string.Join(" ", result)
-                .RegexReplace("\\s+", " ")
-                .Trim();
-            var sanitizedTrigger = someTrigger.RegexReplace(
-                "\\s+", " "
-            ).Trim();
-            Expect(sanitizedResult)
-                .To.Equal(sanitizedTrigger);
-        }
+        // Act
+        var result = sut.ReadAllStatements();
+        // Assert
+        Expect(result)
+            .To.Contain.Only(1).Item(() => string.Join("\n---\n", result));
+        var sanitizedResult = string.Join(" ", result)
+            .RegexReplace("\\s+", " ")
+            .Trim();
+        var sanitizedTrigger = someTrigger.RegexReplace(
+            "\\s+", " "
+        ).Trim();
+        Expect(sanitizedResult)
+            .To.Equal(sanitizedTrigger);
+    }
 
-        [Test]
-        [Explicit("looks like one can't have DELIMITER statements in commands - there is an open bug about this that was 'resolved', but perhaps not")]
-        public void DelimitersInMySqlCommands()
-        {
-            // Arrange
-            var sql = @"
+    [Test]
+    [Explicit("looks like one can't have DELIMITER statements in commands - there is an open bug about this that was 'resolved', but perhaps not")]
+    public void DelimitersInMySqlCommands()
+    {
+        // Arrange
+        var sql = @"
 DELIMITER ;;
 select * from customers limit 10;;
 DELIMITER ;
 ";
-            // Act
-            using var conn = new MySqlConnection(
-                "SERVER=localhost; DATABASE=yumbi; UID=yumbidev; PASSWORD=yumbidev; POOLING=true;Allow User Variables=true; Connection Lifetime=600; Max Pool Size=50;"
-            );
-            conn.Open();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
+        // Act
+        using var conn = new MySqlConnection(
+            "SERVER=localhost; DATABASE=yumbi; UID=yumbidev; PASSWORD=yumbidev; POOLING=true;Allow User Variables=true; Connection Lifetime=600; Max Pool Size=50;"
+        );
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
 
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                Console.WriteLine(reader["id"]);
-            }
-            // Assert
-        }
-
-        [Test]
-        public void ShouldExcludeMySqlSpecificComments()
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
         {
-            // Arrange
-            var someTrigger = $@"/*!50001 Create*/";
-
-            using var file = new AutoTempFile(someTrigger);
-            using var sut = Create(file.Path);
-
-            // Act
-            var result = sut.Next();
-
-            // Assert
-            Expect(result).To.Be.Null();
+            Console.WriteLine(reader["id"]);
         }
+        // Assert
+    }
 
-        [Test]
-        public void ShouldIncludeMySqlSpecificComments()
-        {
-            // Arrange
-            var someTrigger = $@"/*!50001 Create*/";
+    [Test]
+    public void ShouldExcludeMySqlSpecificComments()
+    {
+        // Arrange
+        var someTrigger = $@"/*!50001 Create*/";
 
-            using var file = new AutoTempFile(someTrigger);
-            using var sut = Create(file.Path, new string[] { "--include-mysql-comments" });
+        using var file = new AutoTempFile(someTrigger);
+        using var sut = Create(file.Path);
 
-            // Act
-            var result = sut.Next();
+        // Act
+        var result = sut.Next();
 
-            // Assert
-            Expect(result).To.Equal(someTrigger);
-        }
+        // Assert
+        Expect(result).To.Be.Null();
+    }
 
-        [Test]
-        public void ShouldExcludeMultilineComments()
-        {
-            // Arrange
-            var someTrigger = $@"/*!50001 MySqlSpecific Comment
+    [Test]
+    public void ShouldIncludeMySqlSpecificComments()
+    {
+        // Arrange
+        var someTrigger = $@"/*!50001 Create*/";
+
+        using var file = new AutoTempFile(someTrigger);
+        using var sut = Create(file.Path, new string[] { "--include-mysql-comments" });
+
+        // Act
+        var result = sut.Next();
+
+        // Assert
+        Expect(result).To.Equal(someTrigger);
+    }
+
+    [Test]
+    public void ShouldExcludeMultilineComments()
+    {
+        // Arrange
+        var someTrigger = $@"/*!50001 MySqlSpecific Comment
 AFTER UPDATE ON some_table
 FOR EACH ROW
 BEGIN
@@ -250,39 +248,38 @@ BEGIN
     END IF
 END*/
 ";
-            using var file = new AutoTempFile(someTrigger);
-            using var sut = Create(file.Path);
+        using var file = new AutoTempFile(someTrigger);
+        using var sut = Create(file.Path);
 
-            // Act
-            var result = sut.Next();
+        // Act
+        var result = sut.Next();
 
-            // Assert
-            Expect(result).To.Be.Null();
-        }
-
-        private StatementReader Create(string filePath, string[] args = null)
-        {
-            if (args == null)
-                args = new string[0];
-
-            return new StatementReader(filePath, new Options(args));
-        }
+        // Assert
+        Expect(result).To.Be.Null();
     }
 
-    public static class StatementReaderExtensions
+    private StatementReader Create(string filePath, string[] args = null)
     {
-        public static string[] ReadAllStatements(
-            this StatementReader reader)
-        {
-            var result = new List<string>();
-            var current = reader.Next();
-            while (!(current is null))
-            {
-                result.Add(current);
-                current = reader.Next();
-            }
+        if (args == null)
+            args = new string[0];
 
-            return result.ToArray();
+        return new StatementReader(filePath, new Options(args));
+    }
+}
+
+public static class StatementReaderExtensions
+{
+    public static string[] ReadAllStatements(
+        this StatementReader reader)
+    {
+        var result = new List<string>();
+        var current = reader.Next();
+        while (!(current is null))
+        {
+            result.Add(current);
+            current = reader.Next();
         }
+
+        return result.ToArray();
     }
 }

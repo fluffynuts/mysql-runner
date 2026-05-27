@@ -2,19 +2,16 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>mysql_runner</RootNamespace>
     <PublishTrimmed>true</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
-  <PropertyGroup>
-    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
-  </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MySqlConnector" Version="0.61.0" />
-    <PackageReference Include="PeanutButter.Utils" Version="1.2.388" />
+    <PackageReference Include="MySqlConnector" Version="2.5.0" />
+    <PackageReference Include="PeanutButter.Utils" Version="3.0.418" />
   </ItemGroup>
 
 </Project>

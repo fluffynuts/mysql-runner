@@ -1,4 +1,4 @@
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 
 namespace mysql_runner
 {
