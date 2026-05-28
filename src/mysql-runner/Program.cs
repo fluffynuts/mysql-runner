@@ -1,9 +1,8 @@
 ﻿using PeanutButter.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Text;
+using System.Threading;
 using MySqlConnector;
 
 namespace mysql_runner;
@@ -25,11 +24,16 @@ public static class Program
 
         var connectionStringProvider = new ConnectionStringProvider(opts);
         var originalSettings = ApplyFastRestoreSettingsAsync(connectionStringProvider);
-        HandleUserExit(originalSettings, connectionStringProvider);
+        var cancellationTokenSource = new CancellationTokenSource();
+        HandleUserExit(originalSettings, connectionStringProvider, cancellationTokenSource);
         try
         {
             CreateDatabaseIfRequired(opts, connectionStringProvider);
-            RunAllScriptFiles(opts, connectionStringProvider);
+            RunAllScriptFiles(
+                opts,
+                connectionStringProvider,
+                cancellationTokenSource.Token
+            );
             return 0;
         }
         finally
@@ -40,13 +44,14 @@ public static class Program
 
     private static void HandleUserExit(
         MysqlRestorePerformanceState originalSettings,
-        ConnectionStringProvider connectionStringProvider
+        ConnectionStringProvider connectionStringProvider,
+        CancellationTokenSource cancellationTokenSource
     )
     {
         Console.CancelKeyPress += (sender, e) =>
         {
             e.Cancel = true;
-            RestoreSettings(connectionStringProvider, originalSettings);
+            cancellationTokenSource.Cancel();
         };
     }
 
@@ -136,7 +141,11 @@ public static class Program
         cmd.ExecuteNonQuery();
     }
 
-    private static void RunAllScriptFiles(Options opts, ConnectionStringProvider connectionStringProvider)
+    private static void RunAllScriptFiles(
+        Options opts,
+        ConnectionStringProvider connectionStringProvider,
+        CancellationToken token
+    )
     {
         opts.Files.ForEach((file, idx) =>
         {
@@ -148,16 +157,17 @@ public static class Program
             var conn = disposer.Add(ConnectionFactory.Open(connectionStringProvider.ConnectionString));
             var cmd = disposer.Add(conn.CreateCommand());
             var connectionInfo = new ConnectionInfo(connectionStringProvider.ConnectionString);
-            while ((statement = reader.Next()) != null)
+            while (!token.IsCancellationRequested && (statement = reader.Next()) != null)
             {
                 readBytes += reader.LastReadBytes;
-                if (statement.Contains("_binary '") || statement.Contains("_binary 0x"))
+                cmd.CommandText = statement.Contains("_binary")
+                    ? BinaryLiteralConverter.Convert(statement)
+                    : statement;
+                if (cmd.CommandText.Trim([';']).Trim() == "")
                 {
-                    ExecViaCli(statement, connectionInfo);
                     continue;
                 }
 
-                cmd.CommandText = statement;
                 LogStatement(opts.Verbose, opts.NoProgress, statement, readBytes, info.Length, idx,
                     opts.Files.Count);
                 try
@@ -187,78 +197,6 @@ public static class Program
             }
         });
         ClearProgress();
-    }
-
-    private static void ExecViaCli(string statementInLatin1, ConnectionInfo info)
-    {
-        var bytes = Encoding.Latin1.GetBytes(statementInLatin1);
-        ExecuteViaCli(bytes, info);
-    }
-
-    private static void ExecuteViaCli(byte[] statementBytes, ConnectionInfo info)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "mysql",
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        psi.ArgumentList.Add("--default-character-set=binary");
-        if (info.Host == "localhost")
-        {
-            psi.ArgumentList.Add("--host=127.0.0.1");
-        }
-        else
-        {
-            psi.ArgumentList.Add($"--host={info.Host}");
-        }
-        psi.ArgumentList.Add($"--port={info.Port}");
-        psi.ArgumentList.Add($"--user={info.User}");
-
-        if (!string.IsNullOrEmpty(info.Database))
-        {
-            psi.ArgumentList.Add(info.Database);
-        }
-
-        // Pass password via env var rather than --password=... to keep it out of process listings
-        psi.EnvironmentVariables["MYSQL_PWD"] = info.Password;
-
-        using var process = Process.Start(psi);
-        if (process is null)
-        {
-            throw new InvalidOperationException("Failed to start mysql process");
-        }
-
-        // Write the statement bytes to stdin
-        process.StandardInput.BaseStream.Write(statementBytes, 0, statementBytes.Length);
-
-        // Ensure the statement is terminated with a semicolon and newline
-        // (mysql CLI expects a terminator before it'll execute)
-        var terminator = new byte[] { (byte)';', (byte)'\n' };
-        process.StandardInput.BaseStream.Write(terminator, 0, terminator.Length);
-
-        process.StandardInput.Close();
-
-        // Read stderr in case of failure — must be read before WaitForExit
-        // to avoid deadlock if stderr fills up its buffer
-        var stderr = process.StandardError.ReadToEnd();
-        var stdout = process.StandardOutput.ReadToEnd();
-
-        process.WaitForExit();
-
-        if (process.ExitCode != 0)
-        {
-            throw new MySqlCliException(
-                $"mysql CLI exited with code {process.ExitCode}: {stderr.Trim()}",
-                stderr,
-                stdout,
-                process.ExitCode
-            );
-        }
     }
 
     public class ConnectionInfo

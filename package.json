@@ -9,6 +9,7 @@
         "zarro": "zarro",
         "build": "zarro @",
         "pack": "zarro @",
+        "dump": "dump-files 'src/**/*.cs' 'src/**/*.csproj' 'src/**/*.sln' -o /tmp/mysql-runner",
         "upgrade-packages": "run-s upgrade-pb upgrade-nexpect",
         "upgrade-pb": "cross-env UPGRADE_PACKAGES=/peanutbutter\\.*/ zarro upgrade-packages",
         "upgrade-nexpect": "cross-env UPGRADE_PACKAGES=nexpect,/nexpect\\.*/ zarro upgrade-packages"
